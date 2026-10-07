@@ -2,6 +2,7 @@
 import { Linking } from 'react-native';
 
 import apiClient from './apiClient';
+import EmergencyService from './emergencyService';
 import { getItem, setItem, removeItem } from './localDB';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -140,6 +141,7 @@ const ACTION_MARK_AS_READ = 'MARK_AS_READ';
 const ACTION_MARK_AS_TAKEN = 'MARK_AS_TAKEN';
 const ACTION_SNOOZE_30MIN = 'SNOOZE_30MIN';
 const ACTION_SKIP_DOSE = 'SKIP_DOSE';
+const ACTION_TRIGGER_SOS = 'TRIGGER_SOS';
 
 const DEFAULT_PREFS: NotificationPreferences = {
   medicationReminders: true,
@@ -240,8 +242,17 @@ export const registerNotificationActions = async (): Promise<void> => {
     },
   ];
 
+  const sosActions = [
+    {
+      identifier: ACTION_TRIGGER_SOS,
+      buttonTitle: 'SOS',
+      options: { opensAppToForeground: false },
+    },
+  ];
+
   await Promise.all([
     Notifications.setNotificationCategoryAsync('medication', medicationActions),
+    Notifications.setNotificationCategoryAsync('sos', sosActions),
     ...['appointment', 'vaccination', 'alert', 'scheduled'].map((category) =>
       Notifications.setNotificationCategoryAsync(category, defaultActions),
     ),
@@ -428,6 +439,12 @@ export const handleNotificationAction = async (
     return;
   }
 
+  if (actionIdentifier === ACTION_TRIGGER_SOS) {
+    // Trigger SOS from lock-screen notification
+    void EmergencyService.triggerSOS('SOS triggered from lock-screen notification');
+    return;
+  }
+
   if (actionIdentifier === ACTION_SNOOZE) {
     await snooze(notification);
     return;
@@ -510,6 +527,30 @@ const getNotificationMap = async (): Promise<Record<string, string[]>> => {
   const stored = await getItem(NOTIFICATION_MAP_KEY);
   return stored ? JSON.parse(stored) : {};
 };
+
+// Schedule a notification that provides an SOS action on the lock screen.
+// Call this after user login or when the app becomes active.
+export const scheduleSosReadyNotification = async (): Promise<string | void> => {
+  try {
+    const notificationId = await Notifications.scheduleNotificationAsync({
+      content: {
+        title: 'Cocohub – SOS Ready',
+        body: 'Press to send emergency alert even when device is locked',
+        // The category identifier must match the one we registered for 'sos'
+        categoryIdentifier: 'sos',
+        data: {
+          // Optional: include any data you want, e.g., a flag to indicate this is the ready notification
+          sosReady: true,
+        },
+      },
+      // Trigger immediately
+      trigger: null,
+    });
+    return notificationId;
+  } catch (error) {
+    console.error('Failed to schedule SOS ready notification:', error);
+  }
+};;
 
 const saveNotificationIds = async (entityId: string, notificationIds: string[]): Promise<void> => {
   const map = await getNotificationMap();

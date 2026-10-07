@@ -121,6 +121,9 @@ const SOSButton: React.FC<SOSButtonProps> = ({ onSOSSent, style }) => {
   if (isCountdown) {
     return (
       <TouchableOpacity
+        accessibilityLabel="Cancel SOS"
+        accessibilityHint="Tap to cancel the SOS countdown"
+        importantForAccessibility="yes"
         style={[styles.button, styles.countdownButton, style]}
         onPress={cancelSOS}
         activeOpacity={0.9}
@@ -139,6 +142,9 @@ const SOSButton: React.FC<SOSButtonProps> = ({ onSOSSent, style }) => {
   return (
     <View style={[styles.container, style]}>
       <TouchableOpacity
+        accessibilityLabel="SOS – trigger emergency alert"
+        accessibilityHint="Press and hold for 1.5 seconds to send your location and alert emergency contacts"
+        importantForAccessibility="yes"
         style={styles.button}
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
