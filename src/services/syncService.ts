@@ -166,6 +166,14 @@ export class SyncService {
     });
   }
 
+  // ── Atomically clear item ──
+  async clearSyncedFromQueue(itemId: string): Promise<void> {
+    const queue = await this.getQueue();
+    const updatedQueue = queue.filter((i) => i.id !== itemId);
+    await setItem(SYNC_QUEUE_KEY, JSON.stringify(updatedQueue));
+    await this.patchStatus({ pendingCount: updatedQueue.length });
+  }
+
   // ── Sync ──
   async sync(): Promise<void> {
     const online = await networkMonitor.isOnline();
